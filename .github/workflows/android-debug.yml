@@ -23,23 +23,26 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Validate JavaScript and AI sources
+      - name: Validate tap-to-learn app
         run: |
           node --check app.js
-          node --check ai.js
-          node --check visual-ai.js
-          grep -Fq "Google ML Kit" ai.js
-          grep -Fq "KidsSeekhoAI.recognize" ai.js
-          grep -Fq "KidsSeekhoAI.downloadModel" ai.js
-          grep -Fq "KidsSeekhoAI.modelStatus" ai.js
-          grep -Fq "setPointerCapture" ai.js
+          test -s index.html
+          test -s style.css
+          grep -Fq "दिव्यांश" index.html
+          grep -Fq "A for Apple" app.js
+          grep -Fq "अ से अनार" app.js
+          grep -Fq "lessonCard" index.html
+          if grep -Fq "traceCanvas\|autoCheck\|AI मॉडल डाउनलोड" index.html app.js; then
+            echo "Old handwriting UI detected"
+            exit 1
+          fi
       - name: Install Cordova
         run: npm install --global cordova@13.0.0
       - name: Create Android app shell
         run: |
           cordova create android-build com.malaram.kidsseekho "Kids Seekho"
           rm -rf android-build/www/*
-          cp index.html style.css app.js ai.js visual-ai.js manifest.webmanifest sw.js android-build/www/
+          cp index.html style.css app.js manifest.webmanifest sw.js android-build/www/
           cp -R audio android-build/www/audio
       - name: Add Android platform
         working-directory: android-build
@@ -47,31 +50,22 @@ jobs:
       - name: Add native text-to-speech
         working-directory: android-build
         run: cordova plugin add cordova-plugin-tts --no-telemetry
-      - name: Add native AI engine
-        working-directory: android-build
-        run: cordova plugin add ../kids-seekho-digital-ink --no-telemetry
-      - name: Set ML Kit minimum Android API
-        working-directory: android-build
-        run: echo 'cdvMinSdkVersion=23' >> platforms/android/gradle.properties
       - name: Build debug APK
         working-directory: android-build
         run: cordova build android --debug --no-telemetry
-      - name: Verify debug APK and embedded sources
+      - name: Verify debug APK and embedded app
         run: |
           APK=android-build/platforms/android/app/build/outputs/apk/debug/app-debug.apk
           test -f "$APK"
-          ls -lh "$APK"
+          unzip -p "$APK" assets/www/app.js > /tmp/apk-app.js
+          test -s /tmp/apk-app.js
+          node --check /tmp/apk-app.js
+          cmp -s app.js /tmp/apk-app.js
+          grep -Fq "A for Apple" /tmp/apk-app.js
+          grep -Fq "अ से अनार" /tmp/apk-app.js
+          grep -Fq "दिव्यांश" /tmp/apk-app.js
+          echo "Tap-to-learn APK verification: PASS"
           sha256sum "$APK"
-          unzip -p "$APK" assets/www/ai.js > /tmp/apk-ai.js
-          test -s /tmp/apk-ai.js
-          node --check /tmp/apk-ai.js
-          cmp -s ai.js /tmp/apk-ai.js
-          grep -Fq "Google ML Kit" /tmp/apk-ai.js
-          grep -Fq "KidsSeekhoAI" /tmp/apk-ai.js
-          grep -Fq "setPointerCapture" /tmp/apk-ai.js
-          unzip -l "$APK" | grep -Fq "plugins/com.malaram.kidsseekho.digitalink/www/kidsSeekhoAI.js"
-          unzip -l "$APK" | grep -Fq "libdigitalink.so"
-          echo "APK embedded-source verification: PASS"
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
