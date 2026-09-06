@@ -12,6 +12,7 @@
   canvas.addEventListener('pointerdown',aiDown,{passive:true});
   canvas.addEventListener('pointermove',aiMove,{passive:true});
   window.addEventListener('pointerup',aiUp,{passive:true});
+  $('clearBtn').addEventListener('click',()=>{aiStrokes=[];aiCurrent=null;lastAI=null;updateDebug()});
 
   clearTrace=function(){aiOriginalClear();aiStrokes=[];aiCurrent=null;lastAI=null;updateDebug();};
 
