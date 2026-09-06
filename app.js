@@ -12,18 +12,18 @@ function guideScore(){if(points.length<25)return 0;const r=canvas.getBoundingCli
 function check(){if(drawn<25){$('hint').textContent='थोड़ा और लिखो 👆 अक्षर पूरा बनाओ!';errorSound();setTimeout(()=>speak('अक्षर पूरा लिखो, फिर कोशिश करो।','hi-IN',.78),120);return}const score=guideScore();if(score<.58){$('hint').textContent=score<.3?'अक्षर के हल्के रास्ते पर उंगली चलाओ 👆':'थोड़ा ध्यान से लिखो। हल्के अक्षर के ऊपर लिखने की कोशिश करो ✨';errorSound();setTimeout(()=>speak('कोई बात नहीं। फिर से कोशिश करो।','hi-IN',.78),120);return}let key=`kids-seekho-${mode}`,done=completedFor(mode);if(!done.includes(index)){done.push(index);localStorage.setItem(key,JSON.stringify(done))}$('hint').textContent='शाबाश! ⭐';successSound();setTimeout(()=>speak(mode==='hindi'?'बहुत बढ़िया! तुमने बहुत अच्छा लिखा।':'Great job! You did it!','en-US',.82),280);updateHomeProgress();$('success').classList.add('show');$('success').setAttribute('aria-hidden','false')}
 $('successNext').onclick=()=>{$('success').classList.remove('show');$('success').setAttribute('aria-hidden','true');next()};$('checkBtn').onclick=check;$('clearBtn').onclick=()=>{clearTrace();tone(430,.06);$('hint').textContent='फिर से कोशिश करो ✨'};$('nextBtn').onclick=next;$('backBtn').onclick=home;$('homeBtn').onclick=home;$('speakBtn').onclick=()=>{lessonSpeech();tone(760,.06)};$('soundBtn').onclick=()=>speak('Kids Seekho','en-US',.78);document.querySelectorAll('.category').forEach(b=>b.onclick=()=>openMode(b.dataset.mode));window.addEventListener('resize',()=>{if($('learnScreen').classList.contains('active')){clearTrace();resizeCanvas()}});updateHomeProgress();resizeCanvas();if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 
-/* Mother voice recordings for English A/B/C */
-const MOM_EN_AUDIO=['audio/en/01.mp3','audio/en/02.mp3','audio/en/03.mp3'];
-let momPlayer=null;
-const originalLessonSpeech=lessonSpeech;
-function playMomVoice(){
-  if(mode!=='english'||index>2)return false;
-  try{
-    if(!momPlayer)momPlayer=new Audio();
-    momPlayer.pause();momPlayer.currentTime=0;momPlayer.src=MOM_EN_AUDIO[index];
-    const p=momPlayer.play();
-    if(p&&p.catch)p.catch(()=>{});
-    return true;
-  }catch(e){return false}
-}
-lessonSpeech=function(){if(!playMomVoice())originalLessonSpeech()};
+/* Local audio manager: files are stored on this device in IndexedDB. */
+const AUDIO_DB='KidsSeekhoAudioDB',AUDIO_STORE='recordings';let audioDb=null,customPlayer=null,pendingAudioKey=null;
+function openAudioDb(){return new Promise((resolve,reject)=>{if(audioDb)return resolve(audioDb);const r=indexedDB.open(AUDIO_DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(AUDIO_STORE))r.result.createObjectStore(AUDIO_STORE)};r.onsuccess=()=>{audioDb=r.result;resolve(audioDb)};r.onerror=()=>reject(r.error)})}
+async function saveLocalAudio(key,file){const db=await openAudioDb();return new Promise((resolve,reject)=>{const tx=db.transaction(AUDIO_STORE,'readwrite');tx.objectStore(AUDIO_STORE).put({blob:file,name:file.name,type:file.type,updated:Date.now()},key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
+async function getLocalAudio(key){const db=await openAudioDb();return new Promise((resolve,reject)=>{const r=db.transaction(AUDIO_STORE).objectStore(AUDIO_STORE).get(key);r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error)})}
+async function removeLocalAudio(key){const db=await openAudioDb();return new Promise((resolve,reject)=>{const tx=db.transaction(AUDIO_STORE,'readwrite');tx.objectStore(AUDIO_STORE).delete(key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
+function audioKey(m,i){return `${m}-${i}`}
+async function openAudioManager(){const modal=$('audioManager');modal.classList.add('show');modal.setAttribute('aria-hidden','false');await renderAudioList()}
+function closeAudioManager(){if(customPlayer){customPlayer.pause();customPlayer=null}$('audioManager').classList.remove('show');$('audioManager').setAttribute('aria-hidden','true')}
+async function renderAudioList(){const list=$('audioList');list.innerHTML='';const sections=['english','hindi','numbers','shapes'];for(const m of sections){const title=document.createElement('div');title.className='section-title';title.textContent=labels[m];list.appendChild(title);for(let i=0;i<data[m].length;i++){const x=data[m][i],key=audioKey(m,i),saved=await getLocalAudio(key),row=document.createElement('div');row.className='audio-row';row.innerHTML=`<div class="audio-letter">${x[0]}</div><div class="audio-info"><b>${m==='english'?x[0]+' — '+x[1].replace(/^[A-Z] for /,''):x[1]}</b><small class="audio-status">${saved?'✓ इस फोन में सेव है':'अभी ऑडियो नहीं है'}</small></div><div class="audio-actions"><button class="audio-btn play">▶️</button><button class="audio-btn save">📁 चुनें</button><input class="audio-file" type="file" accept="audio/*" hidden></div>`;const play=row.querySelector('.play'),choose=row.querySelector('.save'),input=row.querySelector('.audio-file');play.disabled=!saved;play.onclick=async()=>{const a=await getLocalAudio(key);if(!a)return;const url=URL.createObjectURL(a.blob);if(customPlayer)customPlayer.pause();customPlayer=new Audio(url);customPlayer.onended=()=>URL.revokeObjectURL(url);customPlayer.play().catch(()=>{})};choose.onclick=()=>{pendingAudioKey=key;input.click()};input.onchange=async()=>{const f=input.files&&input.files[0];if(!f)return;await saveLocalAudio(key,f);pendingAudioKey=null;await renderAudioList()};list.appendChild(row)}}}
+$('audioManagerBtn').onclick=openAudioManager;$('closeAudioManager').onclick=closeAudioManager;$('audioManager').addEventListener('click',e=>{if(e.target.id==='audioManager')closeAudioManager()});
+/* Prefer a locally saved recording; otherwise use bundled sample A/B/C, then TTS. */
+const MOM_EN_AUDIO=['audio/en/01.mp3','audio/en/02.mp3','audio/en/03.mp3'];let momPlayer=null;const originalLessonSpeech=lessonSpeech;
+async function playCustomOrBundled(){let saved=await getLocalAudio(audioKey(mode,index)).catch(()=>null);if(saved){if(momPlayer)momPlayer.pause();momPlayer=new Audio(URL.createObjectURL(saved.blob));momPlayer.play().catch(()=>{});return true}if(mode==='english'&&index<3){try{if(momPlayer)momPlayer.pause();momPlayer=new Audio(MOM_EN_AUDIO[index]);await momPlayer.play();return true}catch(e){}}return false}
+lessonSpeech=async function(){if(!(await playCustomOrBundled()))originalLessonSpeech()};
