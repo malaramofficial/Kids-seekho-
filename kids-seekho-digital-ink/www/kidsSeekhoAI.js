@@ -1,6 +1,9 @@
 var exec = require('cordova/exec');
 
 module.exports = {
+  prepare: function(languageTag, success, failure) {
+    exec(success, failure, 'KidsSeekhoAI', 'prepare', [languageTag || 'en-US']);
+  },
   recognize: function(strokes, languageTag, width, height, success, failure) {
     exec(success, failure, 'KidsSeekhoAI', 'recognize', [{
       strokes: strokes || [],
