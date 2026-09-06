@@ -28,11 +28,11 @@ jobs:
           node --check app.js
           node --check ai.js
           node --check visual-ai.js
-          grep -q "Google ML Kit" ai.js
-          grep -q "KidsSeekhoAI.recognize" ai.js
-          grep -q "KidsSeekhoAI.downloadModel" ai.js
-          grep -q "KidsSeekhoAI.modelStatus" ai.js
-          grep -q "setPointerCapture" ai.js
+          grep -Fq "Google ML Kit" ai.js
+          grep -Fq "KidsSeekhoAI.recognize" ai.js
+          grep -Fq "KidsSeekhoAI.downloadModel" ai.js
+          grep -Fq "KidsSeekhoAI.modelStatus" ai.js
+          grep -Fq "setPointerCapture" ai.js
       - name: Install Cordova
         run: npm install --global cordova@13.0.0
       - name: Create Android app shell
@@ -63,11 +63,14 @@ jobs:
           ls -lh "$APK"
           sha256sum "$APK"
           unzip -p "$APK" assets/www/ai.js > /tmp/apk-ai.js
+          test -s /tmp/apk-ai.js
           node --check /tmp/apk-ai.js
-          grep -q "setPointerCapture" /tmp/apk-ai.js
-          grep -q "Google ML Kit" /tmp/apk-ai.js
-          grep -q "KidsSeekhoAI" /tmp/apk-ai.js
-          unzip -l "$APK" | grep -q "KidsSeekhoAI"
+          cmp -s ai.js /tmp/apk-ai.js
+          grep -Fq "Google ML Kit" /tmp/apk-ai.js
+          grep -Fq "KidsSeekhoAI" /tmp/apk-ai.js
+          grep -Fq "setPointerCapture" /tmp/apk-ai.js
+          unzip -l "$APK" | grep -Fq "plugins/com.malaram.kidsseekho.digitalink/www/kidsSeekhoAI.js"
+          unzip -l "$APK" | grep -Fq "libdigitalink.so"
           echo "APK embedded-source verification: PASS"
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
