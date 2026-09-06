@@ -4,9 +4,12 @@ const lessons={
  numbers:Array.from({length:20},(_,i)=>[String(i+1),['एक','दो','तीन','चार','पाँच','छह','सात','आठ','नौ','दस','ग्यारह','बारह','तेरह','चौदह','पंद्रह','सोलह','सत्रह','अठारह','उन्नीस','बीस'][i],['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','1️⃣1️⃣','1️⃣2️⃣','1️⃣3️⃣','1️⃣4️⃣','1️⃣5️⃣','1️⃣6️⃣','1️⃣7️⃣','1️⃣8️⃣','1️⃣9️⃣','2️⃣0️⃣'][i],'number']),
  shapes:[['○','Circle','⚪','circle'],['□','Square','⬜','square'],['△','Triangle','🔺','triangle'],['☆','Star','⭐','star'],['◇','Diamond','💎','diamond'],['♥','Heart','❤️','heart']]
 };
-const labels={english:'English',hindi:'हिंदी',numbers:'गिनती',shapes:'Shapes'};let mode='english',index=0;const $=id=>document.getElementById(id);
-function browserSpeak(text,lang){if(!('speechSynthesis'in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=.78;u.pitch=1.12;speechSynthesis.speak(u)}
-function speak(text,lang='hi-IN'){if(window.TTS){try{const r=window.TTS.speak({text,locale:lang,rate:.78});if(r&&r.catch)r.catch(()=>browserSpeak(text,lang));return}catch(e){}}browserSpeak(text,lang)}
+const labels={english:'English',hindi:'हिंदी',numbers:'गिनती',shapes:'Shapes'};let mode='english',index=0,voiceBusy=false;
+const $=id=>document.getElementById(id);
+function browserSpeak(text,lang){if(!('speechSynthesis'in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=.74;u.pitch=1.28;u.volume=1;speechSynthesis.speak(u)}
+function localTTS(text,lang){if(!window.TTS)return false;try{const r=window.TTS.speak({text,locale:lang,rate:.76});if(r&&r.catch)r.catch(()=>browserSpeak(text,lang));return true}catch(e){return false}}
+async function aiSpeak(text,lang){if(voiceBusy)return;voiceBusy=true;try{const key=`kids-voice-${lang}-${text}`;const cached=localStorage.getItem(key);if(cached){const a=new Audio(cached);a.onended=()=>voiceBusy=false;await a.play();return}const res=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,language:lang})});if(!res.ok)throw new Error('AI voice unavailable');const blob=await res.blob();const url=URL.createObjectURL(blob);try{localStorage.setItem(key,url)}catch(e){}const a=new Audio(url);a.onended=()=>voiceBusy=false;await a.play()}catch(e){voiceBusy=false;return false}voiceBusy=false;return true}
+function speak(text,lang='hi-IN'){if(!text)return;if(localTTS(text,lang))return;aiSpeak(text,lang).then(ok=>{if(!ok)browserSpeak(text,lang)})}
 function shapeHindi(s){return({Circle:'गोला',Square:'वर्ग',Triangle:'त्रिकोण',Star:'सितारा',Diamond:'हीरा',Heart:'दिल'})[s]||s}
 function lessonText(){const x=lessons[mode][index];if(mode==='english')return `${x[0]} for ${x[1]}`;if(mode==='hindi')return `${x[0]} से ${x[1]}`;if(mode==='numbers')return `${x[0]}, ${x[1]}`;return `${x[1]}, ${shapeHindi(x[1])}`}
 function speakLesson(){speak(lessonText(),mode==='english'?'en-US':'hi-IN')}
@@ -22,4 +25,4 @@ function goHome(){if('speechSynthesis'in window)speechSynthesis.cancel();if(wind
 function next(){index=index<lessons[mode].length-1?index+1:0;render()}function previous(){index=index>0?index-1:lessons[mode].length-1;render()}
 function tapLearn(){animateCard();markDone();playScene();speakLesson();showStar()}
 function randomLesson(){const keys=Object.keys(lessons);mode=keys[Math.floor(Math.random()*keys.length)];index=Math.floor(Math.random()*lessons[mode].length);$('homeScreen').classList.remove('active');$('learnScreen').classList.add('active');render()}
-$('homeBtn').onclick=goHome;$('soundBtn').onclick=()=>speak('दिव्यांश, चलो खेल-खेल में सीखते हैं!');$('backBtn').onclick=goHome;$('prevBtn').onclick=previous;$('nextBtn').onclick=next;$('speakBtn').onclick=speakLesson;$('lessonCard').onclick=tapLearn;$('playHomeBtn').onclick=randomLesson;document.querySelectorAll('.category').forEach(b=>b.onclick=()=>openMode(b.dataset.mode));updateProgress();
+$('homeBtn').onclick=goHome;$('soundBtn').onclick=()=>speak('दिव्यांश, चलो खेल-खेल में सीखते हैं!','hi-IN');$('backBtn').onclick=goHome;$('prevBtn').onclick=previous;$('nextBtn').onclick=next;$('speakBtn').onclick=speakLesson;$('lessonCard').onclick=tapLearn;$('playHomeBtn').onclick=randomLesson;document.querySelectorAll('.category').forEach(b=>b.onclick=()=>openMode(b.dataset.mode));updateProgress();
