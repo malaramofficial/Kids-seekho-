@@ -40,12 +40,9 @@ jobs:
       - name: Add native handwriting AI
         working-directory: android-build
         run: cordova plugin add ../kids-seekho-digital-ink --no-telemetry
-      - name: Configure ML Kit dependency and minimum Android API
+      - name: Set ML Kit minimum Android API
         working-directory: android-build
-        run: |
-          echo 'cdvMinSdkVersion=23' >> platforms/android/gradle.properties
-          sed -i "/dependencies[[:space:]]*{/a\    implementation 'com.google.mlkit:digital-ink-recognition:19.0.0'" platforms/android/app/build.gradle
-          grep -n "digital-ink-recognition" platforms/android/app/build.gradle
+        run: echo 'cdvMinSdkVersion=23' >> platforms/android/gradle.properties
       - name: Build debug APK
         working-directory: android-build
         run: cordova build android --debug --no-telemetry
