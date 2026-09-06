@@ -1,10 +1,13 @@
 package com.malaram.kidsseekho.ai;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Base64;
 import android.util.Log;
-import com.google.mlkit.common.MlKitException;
 import com.google.mlkit.common.model.DownloadConditions;
 import com.google.mlkit.common.model.RemoteModelManager;
 import com.google.mlkit.vision.digitalink.common.RecognitionResult;
@@ -29,35 +32,48 @@ public class KidsSeekhoAI extends CordovaPlugin {
         if("labelImage".equals(action)){ JSONObject r=args.optJSONObject(0); if(r==null)cb.error("Missing image"); else labelImage(r,cb); return true; }
         return false;
     }
+    private boolean hasNetwork(){
+        try{
+            ConnectivityManager cm=(ConnectivityManager)cordova.getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+            if(cm==null)return false;
+            Network n=cm.getActiveNetwork();
+            if(n==null)return false;
+            NetworkCapabilities c=cm.getNetworkCapabilities(n);
+            return c!=null && c.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        }catch(Exception e){return false;}
+    }
     private DigitalInkRecognitionModel getModel(String tag, CallbackContext cb){
         try{ DigitalInkRecognitionModelIdentifier id=DigitalInkRecognitionModelIdentifier.fromLanguageTag(tag); if(id==null){cb.error("No handwriting model for "+tag);return null;} return DigitalInkRecognitionModel.builder(id).build(); }
-        catch(Exception e){cb.error("No handwriting model for "+tag);return null;}
+        catch(Exception e){cb.error("No handwriting model for "+tag+": "+safe(e));return null;}
     }
+    private DownloadConditions downloadConditions(){ return new DownloadConditions.Builder().build(); }
     private void prepareModel(final String tag, final CallbackContext cb){
         cordova.getThreadPool().execute(()->{try{
             final DigitalInkRecognitionModel model=getModel(tag,cb); if(model==null)return;
-            RemoteModelManager m=RemoteModelManager.getInstance();
+            if(!hasNetwork()){cb.error("NO_INTERNET: Android reports no active internet connection");return;}
+            final RemoteModelManager m=RemoteModelManager.getInstance();
             m.isModelDownloaded(model).addOnSuccessListener(ok->{if(Boolean.TRUE.equals(ok)){ready(cb,tag);return;}
-                m.download(model,new DownloadConditions.Builder().build()).addOnSuccessListener(v->ready(cb,tag)).addOnFailureListener(e->cb.error("AI model download failed: "+safe(e)));
-            }).addOnFailureListener(e->cb.error("AI model check failed: "+safe(e)));
-        }catch(Exception e){cb.error("AI preparation failed: "+safe(e));}});
+                m.download(model,downloadConditions()).addOnSuccessListener(v->ready(cb,tag)).addOnFailureListener(e->cb.error("MODEL_DOWNLOAD_FAILED: "+safe(e)));
+            }).addOnFailureListener(e->cb.error("MODEL_CHECK_FAILED: "+safe(e)));
+        }catch(Exception e){cb.error("AI_PREP_FAILED: "+safe(e));}});
     }
-    private void ready(CallbackContext cb,String tag){try{JSONObject o=new JSONObject();o.put("ready",true);o.put("language",tag);cb.success(o);}catch(Exception e){cb.success("ready");}}
+    private void ready(CallbackContext cb,String tag){try{JSONObject o=new JSONObject();o.put("ready",true);o.put("language",tag);o.put("network",true);cb.success(o);}catch(Exception e){cb.success("ready");}}
     private void recognize(final JSONObject req, final CallbackContext cb){
         cordova.getThreadPool().execute(()->{try{
             String tag=req.optString("languageTag","en-US"); JSONArray strokes=req.optJSONArray("strokes"); if(strokes==null||strokes.length()==0){cb.error("No handwriting strokes");return;}
             final DigitalInkRecognitionModel model=getModel(tag,cb); if(model==null)return;
-            RemoteModelManager.getInstance().isModelDownloaded(model).addOnSuccessListener(ok->{if(Boolean.TRUE.equals(ok))runRecognition(model,req,cb);else RemoteModelManager.getInstance().download(model,new DownloadConditions.Builder().build()).addOnSuccessListener(v->runRecognition(model,req,cb)).addOnFailureListener(e->cb.error("AI model download failed: "+safe(e)));}).addOnFailureListener(e->cb.error("AI model check failed: "+safe(e)));
-        }catch(Exception e){cb.error("AI setup failed: "+safe(e));}});
+            if(!hasNetwork()){cb.error("NO_INTERNET: Android reports no active internet connection");return;}
+            RemoteModelManager.getInstance().isModelDownloaded(model).addOnSuccessListener(ok->{if(Boolean.TRUE.equals(ok))runRecognition(model,req,cb);else RemoteModelManager.getInstance().download(model,downloadConditions()).addOnSuccessListener(v->runRecognition(model,req,cb)).addOnFailureListener(e->cb.error("MODEL_DOWNLOAD_FAILED: "+safe(e)));}).addOnFailureListener(e->cb.error("MODEL_CHECK_FAILED: "+safe(e)));
+        }catch(Exception e){cb.error("AI_SETUP_FAILED: "+safe(e));}});
     }
     private void runRecognition(DigitalInkRecognitionModel model,JSONObject req,CallbackContext cb){try{
         JSONArray strokes=req.optJSONArray("strokes"); Ink.Builder ib=Ink.builder();
         for(int i=0;i<strokes.length();i++){JSONArray ps=strokes.getJSONObject(i).optJSONArray("points");if(ps==null)continue;Ink.Stroke.Builder sb=Ink.Stroke.builder();for(int j=0;j<ps.length();j++){JSONObject p=ps.getJSONObject(j);sb.addPoint(Ink.Point.create((float)p.optDouble("x"), (float)p.optDouble("y"),p.optLong("t",System.currentTimeMillis())));}ib.addStroke(sb.build());}
         RecognitionContext rc=RecognitionContext.builder().setWritingArea(new WritingArea((float)req.optDouble("width",1),(float)req.optDouble("height",1))).build();
         DigitalInkRecognizer r=DigitalInkRecognition.getClient(DigitalInkRecognizerOptions.builder(model).build());
-        r.recognize(ib.build(),rc).addOnSuccessListener(x->sendResult(x,cb)).addOnFailureListener(e->cb.error("AI recognition failed: "+safe(e)));
-    }catch(Exception e){cb.error("AI recognition error: "+safe(e));}}
-    private void sendResult(RecognitionResult r,CallbackContext cb){try{JSONObject o=new JSONObject();JSONArray a=new JSONArray();int n=Math.min(8,r.getCandidates().size());for(int i=0;i<n;i++)a.put(r.getCandidates().get(i).getText());o.put("text",n>0?r.getCandidates().get(0).getText():"");o.put("candidates",a);cb.success(o);}catch(Exception e){cb.error("AI result error: "+safe(e));}}
+        r.recognize(ib.build(),rc).addOnSuccessListener(x->sendResult(x,cb)).addOnFailureListener(e->cb.error("AI_RECOGNITION_FAILED: "+safe(e)));
+    }catch(Exception e){cb.error("AI_RECOGNITION_ERROR: "+safe(e));}}
+    private void sendResult(RecognitionResult r,CallbackContext cb){try{JSONObject o=new JSONObject();JSONArray a=new JSONArray();int n=Math.min(8,r.getCandidates().size());for(int i=0;i<n;i++)a.put(r.getCandidates().get(i).getText());o.put("text",n>0?r.getCandidates().get(0).getText():"");o.put("candidates",a);cb.success(o);}catch(Exception e){cb.error("AI_RESULT_ERROR: "+safe(e));}}
     private void labelImage(final JSONObject req, final CallbackContext cb){
         cordova.getThreadPool().execute(()->{try{
             String b64=req.optString("base64",""); if(b64.isEmpty()){cb.error("Empty image");return;} if(b64.contains(","))b64=b64.substring(b64.indexOf(',')+1);
