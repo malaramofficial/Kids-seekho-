@@ -29,7 +29,7 @@ jobs:
         run: |
           cordova create android-build com.malaram.kidsseekho "Kids Seekho"
           rm -rf android-build/www/*
-          cp index.html style.css app.js audio.js manifest.webmanifest sw.js android-build/www/
+          cp index.html style.css app.js manifest.webmanifest sw.js android-build/www/
           cp -R audio android-build/www/audio
       - name: Add Android platform
         working-directory: android-build
