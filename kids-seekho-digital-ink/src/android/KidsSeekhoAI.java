@@ -30,6 +30,11 @@ public class KidsSeekhoAI extends CordovaPlugin {
             callbackContext.success("true");
             return true;
         }
+        if ("prepare".equals(action)) {
+            String languageTag = args.optString(0, "en-US");
+            prepareModel(languageTag, callbackContext);
+            return true;
+        }
         if ("recognize".equals(action)) {
             JSONObject request = args.optJSONObject(0);
             if (request == null) {
@@ -42,6 +47,67 @@ public class KidsSeekhoAI extends CordovaPlugin {
         return false;
     }
 
+    private DigitalInkRecognitionModel getModel(String languageTag, CallbackContext callbackContext) {
+        try {
+            DigitalInkRecognitionModelIdentifier id =
+                    DigitalInkRecognitionModelIdentifier.fromLanguageTag(languageTag);
+            if (id == null) {
+                callbackContext.error("No handwriting model for " + languageTag);
+                return null;
+            }
+            return DigitalInkRecognitionModel.builder(id).build();
+        } catch (MlKitException e) {
+            callbackContext.error("No handwriting model for " + languageTag);
+            return null;
+        }
+    }
+
+    private void prepareModel(final String languageTag, final CallbackContext callbackContext) {
+        cordova.getThreadPool().execute(() -> {
+            try {
+                final DigitalInkRecognitionModel model = getModel(languageTag, callbackContext);
+                if (model == null) return;
+                RemoteModelManager manager = RemoteModelManager.getInstance();
+                manager.isModelDownloaded(model).addOnSuccessListener(downloaded -> {
+                    if (Boolean.TRUE.equals(downloaded)) {
+                        try {
+                            JSONObject out = new JSONObject();
+                            out.put("ready", true);
+                            out.put("downloaded", true);
+                            out.put("language", languageTag);
+                            callbackContext.success(out);
+                        } catch (Exception e) {
+                            callbackContext.success("ready");
+                        }
+                        return;
+                    }
+                    manager.download(model, new DownloadConditions.Builder().build())
+                            .addOnSuccessListener(v -> {
+                                try {
+                                    JSONObject out = new JSONObject();
+                                    out.put("ready", true);
+                                    out.put("downloaded", true);
+                                    out.put("language", languageTag);
+                                    callbackContext.success(out);
+                                } catch (Exception e) {
+                                    callbackContext.success("ready");
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Model download failed for " + languageTag, e);
+                                callbackContext.error("AI model download failed: " + safeMessage(e));
+                            });
+                }).addOnFailureListener(e -> {
+                    Log.e(TAG, "Model availability check failed", e);
+                    callbackContext.error("AI model check failed: " + safeMessage(e));
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Model preparation failed", e);
+                callbackContext.error("AI preparation failed: " + safeMessage(e));
+            }
+        });
+    }
+
     private void recognize(final JSONObject request, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(() -> {
             try {
@@ -49,36 +115,19 @@ public class KidsSeekhoAI extends CordovaPlugin {
                 float width = (float) request.optDouble("width", 1.0);
                 float height = (float) request.optDouble("height", 1.0);
                 JSONArray strokes = request.optJSONArray("strokes");
-
                 if (strokes == null || strokes.length() == 0) {
                     callbackContext.error("No handwriting strokes");
                     return;
                 }
-
-                DigitalInkRecognitionModelIdentifier modelIdentifier;
-                try {
-                    modelIdentifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag(languageTag);
-                } catch (MlKitException e) {
-                    callbackContext.error("No handwriting model for " + languageTag);
-                    return;
-                }
-                if (modelIdentifier == null) {
-                    callbackContext.error("No handwriting model for " + languageTag);
-                    return;
-                }
-
-                final DigitalInkRecognitionModel model =
-                        DigitalInkRecognitionModel.builder(modelIdentifier).build();
-
+                final DigitalInkRecognitionModel model = getModel(languageTag, callbackContext);
+                if (model == null) return;
                 RemoteModelManager.getInstance().isModelDownloaded(model)
                         .addOnSuccessListener(downloaded -> {
                             if (Boolean.TRUE.equals(downloaded)) {
                                 runRecognition(model, request, width, height, callbackContext);
                             } else {
-                                DownloadConditions conditions = new DownloadConditions.Builder().build();
-                                RemoteModelManager.getInstance().download(model, conditions)
-                                        .addOnSuccessListener(aVoid ->
-                                                runRecognition(model, request, width, height, callbackContext))
+                                RemoteModelManager.getInstance().download(model, new DownloadConditions.Builder().build())
+                                        .addOnSuccessListener(v -> runRecognition(model, request, width, height, callbackContext))
                                         .addOnFailureListener(e -> {
                                             Log.e(TAG, "Model download failed", e);
                                             callbackContext.error("AI model download failed: " + safeMessage(e));
@@ -114,14 +163,12 @@ public class KidsSeekhoAI extends CordovaPlugin {
                 }
                 inkBuilder.addStroke(strokeBuilder.build());
             }
-
             Ink ink = inkBuilder.build();
             DigitalInkRecognizer recognizer = DigitalInkRecognition.getClient(
                     DigitalInkRecognizerOptions.builder(model).build());
             RecognitionContext context = RecognitionContext.builder()
                     .setWritingArea(new WritingArea(width, height))
                     .build();
-
             recognizer.recognize(ink, context)
                     .addOnSuccessListener(result -> sendResult(result, callbackContext))
                     .addOnFailureListener(e -> {
@@ -139,9 +186,7 @@ public class KidsSeekhoAI extends CordovaPlugin {
             JSONObject out = new JSONObject();
             JSONArray candidates = new JSONArray();
             int limit = Math.min(5, result.getCandidates().size());
-            for (int i = 0; i < limit; i++) {
-                candidates.put(result.getCandidates().get(i).getText());
-            }
+            for (int i = 0; i < limit; i++) candidates.put(result.getCandidates().get(i).getText());
             out.put("text", limit > 0 ? result.getCandidates().get(0).getText() : "");
             out.put("candidates", candidates);
             callbackContext.success(out);
