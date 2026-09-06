@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#6c5ce7">
+  <meta name="description" content="Kids Seekho — छोटे बच्चों के लिए अक्षर, गिनती और tracing practice app">
+  <title>Kids Seekho 🌈</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <button id="homeBtn" class="icon-btn" aria-label="होम">⌂</button>
+      <div class="brand"><span>🌈</span><b>Kids Seekho</b></div>
+      <button id="soundBtn" class="icon-btn" aria-label="आवाज़">🔊</button>
+    </header>
+
+    <section id="homeScreen" class="screen active">
+      <div class="hero">
+        <div class="hero-stars">⭐ ⭐ ⭐</div>
+        <h1>खेल-खेल में सीखो!</h1>
+        <p>देखो • सुनो • लिखो • सीखो</p>
+      </div>
+      <div class="progress-card">
+        <div><span>आज की प्रैक्टिस</span><strong id="progressText">0 / 26</strong></div>
+        <div class="progress"><i id="progressBar"></i></div>
+      </div>
+      <div class="section-title">क्या सीखना है?</div>
+      <div class="category-grid">
+        <button class="category english" data-mode="english"><span>🔤</span><b>English</b><small>A B C</small></button>
+        <button class="category numbers" data-mode="numbers"><span>🔢</span><b>Numbers</b><small>1 2 3</small></button>
+        <button class="category hindi" data-mode="hindi"><span>अ</span><b>हिंदी</b><small>अ आ इ</small></button>
+        <button class="category shapes" data-mode="shapes"><span>🔺</span><b>Shapes</b><small>○ □ △</small></button>
+      </div>
+      <div class="tip">👆 स्क्रीन पर उंगली से अक्षर के रास्ते पर चलो।</div>
+    </section>
+
+    <section id="learnScreen" class="screen">
+      <div class="lesson-head">
+        <button id="backBtn" class="round-btn">←</button>
+        <div><span id="modeLabel">English</span><strong id="counter">1 / 26</strong></div>
+        <button id="speakBtn" class="round-btn">🔊</button>
+      </div>
+      <div class="lesson-card">
+        <div class="letter-wrap"><div id="letter" class="letter">A</div></div>
+        <div id="word" class="word">A for Apple 🍎</div>
+        <p id="hint" class="hint">पहले सुनो, फिर उंगली से लिखो ✨</p>
+      </div>
+      <div class="trace-card">
+        <canvas id="traceCanvas"></canvas>
+        <div id="guide" class="guide">A</div>
+        <div class="trace-label">✍️ यहाँ लिखो</div>
+      </div>
+      <div class="actions">
+        <button id="clearBtn" class="secondary">↻ फिर से</button>
+        <button id="checkBtn" class="primary">✓ मैंने लिखा</button>
+        <button id="nextBtn" class="next">आगे →</button>
+      </div>
+    </section>
+
+    <div id="success" class="success-overlay" aria-hidden="true">
+      <div class="success-box"><div class="big-star">⭐</div><h2>बहुत बढ़िया! 🎉</h2><p>तुमने बहुत अच्छा लिखा!</p><button id="successNext" class="primary">अगला अक्षर →</button></div>
+    </div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
