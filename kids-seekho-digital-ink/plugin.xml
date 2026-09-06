@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android" id="com.malaram.kidsseekho.digitalink" version="1.1.1">
-    <name>Kids Seekho Digital Ink AI</name>
-    <description>Native Google ML Kit Digital Ink handwriting recognition for Kids Seekho.</description>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android" id="com.malaram.kidsseekho.digitalink" version="2.0.0">
+    <name>Kids Seekho AI Engine</name>
+    <description>Native Google ML Kit AI engine for handwriting and visual learning.</description>
     <license>Apache-2.0</license>
-    <js-module src="www/kidsSeekhoAI.js" name="KidsSeekhoAI">
-        <clobbers target="KidsSeekhoAI" />
-    </js-module>
+    <js-module src="www/kidsSeekhoAI.js" name="KidsSeekhoAI"><clobbers target="KidsSeekhoAI" /></js-module>
     <platform name="android">
         <framework src="com.google.mlkit:digital-ink-recognition:19.0.0" />
+        <framework src="com.google.mlkit:image-labeling:17.0.9" />
         <config-file parent="/*" target="AndroidManifest.xml">
             <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.CAMERA" />
+            <uses-permission android:name="android.permission.RECORD_AUDIO" />
         </config-file>
         <source-file src="src/android/KidsSeekhoAI.java" target-dir="src/com/malaram/kidsseekho/ai" />
     </platform>
