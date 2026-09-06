@@ -29,8 +29,8 @@ jobs:
           test -s index.html
           test -s style.css
           grep -Fq "दिव्यांश" index.html
-          grep -Fq "A for Apple" app.js
-          grep -Fq "अ से अनार" app.js
+          grep -Fq "['A','Apple'" app.js
+          grep -Fq "['अ','अनार'" app.js
           grep -Fq "lessonCard" index.html
           echo "Tap-to-learn source validation: PASS"
       - name: Install Cordova
@@ -58,8 +58,8 @@ jobs:
           test -s /tmp/apk-app.js
           node --check /tmp/apk-app.js
           cmp -s app.js /tmp/apk-app.js
-          grep -Fq "A for Apple" /tmp/apk-app.js
-          grep -Fq "अ से अनार" /tmp/apk-app.js
+          grep -Fq "['A','Apple'" /tmp/apk-app.js
+          grep -Fq "['अ','अनार'" /tmp/apk-app.js
           grep -Fq "दिव्यांश" /tmp/apk-app.js
           echo "Tap-to-learn APK verification: PASS"
           sha256sum "$APK"
