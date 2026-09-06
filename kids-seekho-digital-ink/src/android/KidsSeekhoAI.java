@@ -65,7 +65,6 @@ public class KidsSeekhoAI extends CordovaPlugin {
         modelState.put(tag,state);
         if(error==null) modelError.remove(tag); else modelError.put(tag,error);
     }
-
     private synchronized String getState(String tag){ return modelState.getOrDefault(tag,"idle"); }
     private synchronized String getError(String tag){ return modelError.getOrDefault(tag,""); }
 
@@ -73,15 +72,16 @@ public class KidsSeekhoAI extends CordovaPlugin {
         cordova.getThreadPool().execute(()->{
             try{
                 final DigitalInkRecognitionModel model=getModel(tag,cb); if(model==null)return;
-                if(!hasNetwork()){
-                    setState(tag,"no_internet","NO_INTERNET: Android reports no active internet connection");
-                    cb.error("NO_INTERNET: Android reports no active internet connection");
-                    return;
-                }
                 final RemoteModelManager m=RemoteModelManager.getInstance();
                 setState(tag,"checking",null);
+                // IMPORTANT: a downloaded model works offline. Only require network when a download is actually needed.
                 m.isModelDownloaded(model).addOnSuccessListener(ok->{
                     if(Boolean.TRUE.equals(ok)){ setState(tag,"complete",null); ready(cb,tag); return; }
+                    if(!hasNetwork()){
+                        setState(tag,"no_internet","NO_INTERNET: मॉडल डाउनलोड करने के लिए सक्रिय इंटरनेट कनेक्शन नहीं मिला");
+                        cb.error("NO_INTERNET: मॉडल डाउनलोड करने के लिए सक्रिय इंटरनेट कनेक्शन नहीं मिला");
+                        return;
+                    }
                     setState(tag,"downloading",null);
                     m.download(model,downloadConditions())
                         .addOnSuccessListener(v->{setState(tag,"complete",null);ready(cb,tag);})
@@ -109,7 +109,7 @@ public class KidsSeekhoAI extends CordovaPlugin {
                         JSONObject x=new JSONObject(o.toString());
                         if(Boolean.TRUE.equals(downloaded)){
                             setState(tag,"complete",null);
-                            x.put("state","complete");x.put("downloaded",true);x.put("progress",100);
+                            x.put("state","complete");x.put("downloaded",true);x.put("progress",100);x.put("ready",true);
                         }else{
                             x.put("downloaded",false);
                             String s=getState(tag);
@@ -125,7 +125,7 @@ public class KidsSeekhoAI extends CordovaPlugin {
     }
 
     private void ready(CallbackContext cb,String tag){
-        try{JSONObject o=new JSONObject();o.put("ready",true);o.put("language",tag);o.put("network",hasNetwork());o.put("progress",100);cb.success(o);}catch(Exception e){cb.success("ready");}
+        try{JSONObject o=new JSONObject();o.put("ready",true);o.put("downloaded",true);o.put("language",tag);o.put("network",hasNetwork());o.put("progress",100);cb.success(o);}catch(Exception e){cb.success("ready");}
     }
 
     private void recognize(final JSONObject req, final CallbackContext cb){
@@ -133,9 +133,10 @@ public class KidsSeekhoAI extends CordovaPlugin {
             String tag=req.optString("languageTag","en-US"); JSONArray strokes=req.optJSONArray("strokes");
             if(strokes==null||strokes.length()==0){cb.error("No handwriting strokes");return;}
             final DigitalInkRecognitionModel model=getModel(tag,cb); if(model==null)return;
-            if(!hasNetwork()){cb.error("NO_INTERNET: Android reports no active internet connection");return;}
+            // Recognition is fully on-device after the model is downloaded. Do NOT require internet here.
             RemoteModelManager.getInstance().isModelDownloaded(model).addOnSuccessListener(ok->{
                 if(Boolean.TRUE.equals(ok))runRecognition(model,req,cb);
+                else if(!hasNetwork())cb.error("NO_INTERNET: AI मॉडल अभी फोन में डाउनलोड नहीं है");
                 else RemoteModelManager.getInstance().download(model,downloadConditions()).addOnSuccessListener(v->runRecognition(model,req,cb)).addOnFailureListener(e->cb.error("MODEL_DOWNLOAD_FAILED: "+safe(e)));
             }).addOnFailureListener(e->cb.error("MODEL_CHECK_FAILED: "+safe(e)));
         }catch(Exception e){cb.error("AI_SETUP_FAILED: "+safe(e));}});
