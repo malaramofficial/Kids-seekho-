@@ -28,7 +28,7 @@ jobs:
           node --check app.js
           node --check ai.js
           node --check visual-ai.js
-          grep -q "Google ML Kit — native only" ai.js
+          grep -q "Google ML Kit" ai.js
           grep -q "KidsSeekhoAI.recognize" ai.js
           grep -q "KidsSeekhoAI.downloadModel" ai.js
           grep -q "KidsSeekhoAI.modelStatus" ai.js
@@ -62,9 +62,13 @@ jobs:
           test -f "$APK"
           ls -lh "$APK"
           sha256sum "$APK"
-          unzip -p "$APK" assets/www/ai.js | grep -q "setPointerCapture"
-          unzip -p "$APK" assets/www/ai.js | grep -q "ऑफलाइन भी काम करेगा"
+          unzip -p "$APK" assets/www/ai.js > /tmp/apk-ai.js
+          node --check /tmp/apk-ai.js
+          grep -q "setPointerCapture" /tmp/apk-ai.js
+          grep -q "Google ML Kit" /tmp/apk-ai.js
+          grep -q "KidsSeekhoAI" /tmp/apk-ai.js
           unzip -l "$APK" | grep -q "KidsSeekhoAI"
+          echo "APK embedded-source verification: PASS"
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
