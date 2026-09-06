@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" id="com.malaram.kidsseekho.digitalink" version="1.0.0">
+    <name>Kids Seekho Digital Ink AI</name>
+    <description>Native Google ML Kit Digital Ink handwriting recognition for Kids Seekho.</description>
+    <license>Apache-2.0</license>
+    <js-module src="www/kidsSeekhoAI.js" name="KidsSeekhoAI">
+        <clobbers target="KidsSeekhoAI" />
+    </js-module>
+    <platform name="android">
+        <framework src="com.google.mlkit:digital-ink-recognition:19.0.0" />
+        <source-file src="src/android/KidsSeekhoAI.java" target-dir="src/com/malaram/kidsseekho/ai" />
+    </platform>
+</plugin>
