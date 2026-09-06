@@ -1,0 +1,50 @@
+name: Kids Seekho Browser Debug
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  browser-debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax and manifest checks
+        run: |
+          node --check app.js
+          node --check sw.js
+          node -e "JSON.parse(require('fs').readFileSync('manifest.webmanifest','utf8')); console.log('Manifest OK')"
+          test -f index.html && test -f style.css
+      - name: Install Playwright
+        run: npm install --no-save playwright@1.55.0
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start app and browser smoke test
+        run: |
+          python3 -m http.server 4173 >/tmp/kids-seekho-server.log 2>&1 &
+          sleep 2
+          node - <<'NODE'
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({headless:true});
+            const page = await browser.newPage({viewport:{width:390,height:844}});
+            const errors=[];
+            page.on('pageerror', e => errors.push(e.message));
+            await page.goto('http://127.0.0.1:4173/', {waitUntil:'networkidle'});
+            if (!(await page.title()).toLowerCase().includes('kids seekho')) throw new Error('Bad title');
+            await page.getByText('English',{exact:true}).click();
+            await page.waitForTimeout(300);
+            if (!(await page.locator('#letter').textContent()).trim()) throw new Error('Lesson did not open');
+            if (!(await page.locator('#traceCanvas').isVisible())) throw new Error('Canvas not visible');
+            if (errors.length) throw new Error('Page errors: '+errors.join(' | '));
+            console.log('BROWSER SMOKE TEST PASSED');
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
