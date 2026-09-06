@@ -40,6 +40,10 @@ jobs:
         working-directory: android-build
         run: cordova platform add android@13.0.0 --no-telemetry
 
+      - name: Add native text-to-speech
+        working-directory: android-build
+        run: cordova plugin add cordova-plugin-tts --no-telemetry
+
       - name: Build debug APK
         working-directory: android-build
         run: cordova build android --debug --no-telemetry
