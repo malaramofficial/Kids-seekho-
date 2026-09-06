@@ -1,5 +1,6 @@
-/* Kids Seekho Visual AI Lab: camera/photo -> native ML Kit image labeling -> child-friendly speech */
+/* Kids Seekho Visual AI Lab: camera/photo -> native ML Kit on Android, online AI on web */
 (function(){
+  if(!window.cordova){const s=document.createElement('script');s.src='online-handwriting.js';document.head.appendChild(s)}
   const input=()=>document.getElementById('aiPhoto');
   const resultEl=()=>document.getElementById('visionResult');
   const status=()=>document.getElementById('visionStatus');
@@ -8,14 +9,9 @@
   function show(msg){if(status())status().textContent=msg}
   function fileToDataURL(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)})}
   async function analyze(file){
-    if(!file)return; show('🤖 AI फोटो को पहचान रहा है…'); if(resultEl())resultEl().innerHTML='';
+    if(!file)return;show('🤖 AI फोटो को पहचान रहा है…');if(resultEl())resultEl().innerHTML='';
+    if(!window.cordova){try{const b64=await fileToDataURL(file);const rr=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'vision',image:b64})});const r=await rr.json();if(!rr.ok)throw new Error(r.error||'Online AI error');const name=r.hindi||r.recognized||'कुछ';show('✅ ऑनलाइन AI ने पहचान लिया');if(resultEl())resultEl().innerHTML=`<div class="vision-chip"><b>1. ${name}</b><small>${Math.round((Number(r.confidence)||.9)*100)}% भरोसा</small></div>`;speakHindi('यह '+name+' है।');return}catch(e){show('❌ ऑनलाइन AI पहचान नहीं कर पाया');speakHindi('माफ़ करना, मैं इसे पहचान नहीं पाया। साफ़ फोटो दिखाओ।');return}}
     if(!window.KidsSeekhoAI||typeof window.KidsSeekhoAI.labelImage!=='function'){show('⚠️ इस APK में Visual AI उपलब्ध नहीं है।');return}
-    try{const b64=await fileToDataURL(file);window.KidsSeekhoAI.labelImage(b64,r=>{
-      const labels=(r&&Array.isArray(r.labels)?r.labels:[]).sort((a,b)=>b.confidence-a.confidence);if(!labels.length){show('🤔 AI को साफ़ चीज़ नहीं मिली।');speakHindi('मुझे साफ़ चीज़ नहीं दिखी। फिर से फोटो दिखाओ।');return}
-      const top=labels.slice(0,5);show('✅ AI ने पहचान लिया');if(resultEl())resultEl().innerHTML=top.map((x,i)=>`<div class="vision-chip"><b>${i+1}. ${friendly(x.label)}</b><small>${Math.round(x.confidence*100)}% भरोसा</small></div>`).join('');
-      const names=top.slice(0,3).map(x=>friendly(x.label));speakHindi('यहाँ मुझे '+names.join(', ')+' दिखाई दे रहा है।');
-    },e=>{show('❌ AI पहचान नहीं कर पाया');speakHindi('माफ़ करना, मैं इसे पहचान नहीं पाया। साफ़ फोटो दिखाओ।')});}
-    catch(e){show('❌ फोटो पढ़ने में समस्या');}
-  }
+    try{const b64=await fileToDataURL(file);window.KidsSeekhoAI.labelImage(b64,r=>{const labels=(r&&Array.isArray(r.labels)?r.labels:[]).sort((a,b)=>b.confidence-a.confidence);if(!labels.length){show('🤔 AI को साफ़ चीज़ नहीं मिली।');speakHindi('मुझे साफ़ चीज़ नहीं दिखी। फिर से फोटो दिखाओ।');return}const top=labels.slice(0,5);show('✅ AI ने पहचान लिया');if(resultEl())resultEl().innerHTML=top.map((x,i)=>`<div class="vision-chip"><b>${i+1}. ${friendly(x.label)}</b><small>${Math.round(x.confidence*100)}% भरोसा</small></div>`).join('');speakHindi('यहाँ मुझे '+top.slice(0,3).map(x=>friendly(x.label)).join(', ')+' दिखाई दे रहा है।')},e=>{show('❌ AI पहचान नहीं कर पाया');speakHindi('माफ़ करना, मैं इसे पहचान नहीं पाया। साफ़ फोटो दिखाओ।')})}catch(e){show('❌ फोटो पढ़ने में समस्या')}}
   document.addEventListener('DOMContentLoaded',()=>{const f=input();if(f)f.addEventListener('change',e=>analyze(e.target.files&&e.target.files[0]));const b=document.getElementById('aiSpeakResult');if(b)b.onclick=()=>{const txt=[...document.querySelectorAll('.vision-chip b')].map(x=>x.textContent.replace(/^\d+\.\s*/,''));if(txt.length)speakHindi('AI ने बताया: '+txt.join(', '))};});
 })();
