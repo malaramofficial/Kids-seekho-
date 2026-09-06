@@ -1,0 +1,9 @@
+{
+  "name": "com.malaram.kidsseekho.digitalink",
+  "version": "1.0.0",
+  "description": "Native Google ML Kit Digital Ink handwriting recognition for Kids Seekho",
+  "cordova": {
+    "id": "com.malaram.kidsseekho.digitalink",
+    "platforms": ["android"]
+  }
+}
