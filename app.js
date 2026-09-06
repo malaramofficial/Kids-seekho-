@@ -1,0 +1,24 @@
+const data={
+ english:[..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"].map((l,i)=>[l,`A${i===0?'':' for'} ${['Apple','Ball','Cat','Dog','Elephant','Fish','Grapes','House','Ice cream','Juice','Kite','Lion','Mango','Nest','Orange','Parrot','Queen','Rabbit','Sun','Tiger','Umbrella','Van','Watermelon','Xylophone','Yak','Zebra'][i]}`]),
+ numbers:[...Array(20)].map((_,i)=>[String(i+1),`${i+1} ${['One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen','Twenty'][i]}`]),
+ hindi:[['अ','अनार'],['आ','आम'],['इ','इमली'],['ई','ईख'],['उ','उल्लू'],['ऊ','ऊन'],['ए','एड़ी'],['ऐ','ऐनक'],['ओ','ओखली'],['औ','औरत'],['क','कबूतर'],['ख','खरगोश'],['ग','गमला'],['घ','घर'],['च','चम्मच'],['छ','छाता'],['ज','जहाज'],['झ','झंडा'],['ट','टमाटर'],['ठ','ठेला'],['ड','डमरू'],['ढ','ढक्कन'],['त','तरबूज'],['थ','थर्मस'],['द','दरवाज़ा'],['ध','धनुष'],['न','नल'],['प','पतंग'],['फ','फल'],['ब','बकरी'],['भ','भालू'],['म','मछली'],['य','यज्ञ'],['र','रथ'],['ल','लट्टू'],['व','वन'],['श','शेर'],['ष','षट्कोण'],['स','साँप'],['ह','हाथी']],
+ shapes:[['○','Circle'],['□','Square'],['△','Triangle'],['☆','Star'],['◇','Diamond'],['♥','Heart']]
+};
+const labels={english:'English',numbers:'Numbers',hindi:'हिंदी',shapes:'Shapes'};
+let mode='english',index=0,drawn=0,drawing=false,points=[];
+const $=id=>document.getElementById(id);
+const canvas=$('traceCanvas'),ctx=canvas.getContext('2d');
+function speak(text){if(!('speechSynthesis'in window))return; speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=mode==='hindi'?'hi-IN':'en-US';u.rate=.78;u.pitch=1.15;speechSynthesis.speak(u)}
+function resizeCanvas(){const r=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);canvas.width=r.width*dpr;canvas.height=r.height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.lineCap='round';ctx.lineJoin='round'}
+function clearTrace(){const r=canvas.getBoundingClientRect();ctx.clearRect(0,0,r.width,r.height);drawn=0;points=[]}
+function render(){const item=data[mode][index];$('modeLabel').textContent=labels[mode];$('counter').textContent=`${index+1} / ${data[mode].length}`;$('letter').textContent=item[0];$('guide').textContent=item[0];$('word').textContent=mode==='english'?`${item[0]} — ${item[1]}`:item[1];$('progressText').textContent=`${Math.min(index, data[mode].length)} / ${data[mode].length}`;$('progressBar').style.width=`${(index/data[mode].length)*100}%`;clearTrace();resizeCanvas();setTimeout(()=>speak(item[1]),180)}
+function openMode(m){mode=m;index=0;$('homeScreen').classList.remove('active');$('learnScreen').classList.add('active');render()}
+function home(){$('learnScreen').classList.remove('active');$('homeScreen').classList.add('active');speechSynthesis?.cancel()}
+function next(){if(index<data[mode].length-1){index++;render()}else{index=0;render()}}
+function pos(e){const r=canvas.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top}}
+function start(e){e.preventDefault();drawing=true;const p=pos(e);points.push(p);ctx.beginPath();ctx.moveTo(p.x,p.y)}
+function move(e){if(!drawing)return;e.preventDefault();const p=pos(e);points.push(p);ctx.lineTo(p.x,p.y);ctx.strokeStyle='#6c5ce7';ctx.lineWidth=10;ctx.stroke();drawn++}
+function end(){drawing=false}
+canvas.addEventListener('pointerdown',start);canvas.addEventListener('pointermove',move);window.addEventListener('pointerup',end);canvas.addEventListener('touchstart',start,{passive:false});canvas.addEventListener('touchmove',move,{passive:false});canvas.addEventListener('touchend',end);
+function check(){if(drawn<10){$('hint').textContent='थोड़ा और लिखो 👆 अक्षर पूरा बनाओ!';$('hint').animate([{transform:'scale(1)'},{transform:'scale(1.04)'},{transform:'scale(1)'}],300);return}let key=`kids-seekho-${mode}`;let done=JSON.parse(localStorage.getItem(key)||'[]');if(!done.includes(index)){done.push(index);localStorage.setItem(key,JSON.stringify(done))}$('hint').textContent='शाबाश! ⭐';$('success').classList.add('show');$('success').setAttribute('aria-hidden','false')}
+$('successNext').onclick=()=>{$('success').classList.remove('show');$('success').setAttribute('aria-hidden','true');next()};$('checkBtn').onclick=check;$('clearBtn').onclick=()=>{clearTrace();$('hint').textContent='फिर से कोशिश करो ✨'};$('nextBtn').onclick=next;$('backBtn').onclick=home;$('homeBtn').onclick=home;$('speakBtn').onclick=()=>speak(data[mode][index][1]);$('soundBtn').onclick=()=>speak('Kids Seekho');document.querySelectorAll('.category').forEach(b=>b.onclick=()=>openMode(b.dataset.mode));window.addEventListener('resize',()=>{if($('learnScreen').classList.contains('active')){clearTrace();resizeCanvas()}});resizeCanvas();
