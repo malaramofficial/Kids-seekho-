@@ -6,7 +6,7 @@
 <link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="style.css"><title>Kids Seekho 🌈</title>
 </head>
 <body><main class="app">
-<header class="topbar"><button id="homeBtn" class="icon-btn" aria-label="होम">⌂</button><div class="brand"><span>🌈</span><b>Kids Seekho</b></div><button id="soundBtn" class="icon-btn" aria-label="आवाज़">🔊</button></header>
+<header class="topbar"><button id="homeBtn" class="icon-btn" aria-label="होम">⌂</button><div class="brand"><span>🌈</span><b>Kids Seekho</b></div><div class="top-actions"><button id="soundBtn" class="icon-btn" aria-label="आवाज़">🔊</button><button id="audioManagerBtn" class="icon-btn" aria-label="ऑडियो सेटिंग">🎙️</button></div></header>
 <section id="homeScreen" class="screen active">
 <div class="hero"><div class="hero-stars">⭐ ⭐ ⭐</div><h1>खेल-खेल में सीखो!</h1><p>देखो • सुनो • बोलो • लिखो</p></div>
 <div class="progress-card"><div><span>आज की प्रैक्टिस</span><strong id="progressText">0 / 26</strong></div><div class="progress"><i id="progressBar"></i></div><small id="progressLabel">अभी शुरुआत करें 🌟</small></div>
@@ -15,11 +15,14 @@
 <button class="category numbers" data-mode="numbers"><span>🔢</span><b>Numbers</b><small>1 2 3 • Counting</small></button>
 <button class="category hindi" data-mode="hindi"><span>अ</span><b>हिंदी</b><small>अ आ इ • वर्णमाला</small></button>
 <button class="category shapes" data-mode="shapes"><span>🔺</span><b>Shapes</b><small>○ □ △ • पहचानो</small></button></div>
-<div class="tip">👆 अक्षर के रास्ते पर उंगली चलाओ • 🔊 सुनो • ⭐ सीखो</div></section>
+<div class="tip">👆 अक्षर के रास्ते पर उंगली चलाओ • 🔊 सुनो • ⭐ सीखो</div>
+<div class="voice-tip">🎙️ <b>अपनी आवाज़ लगाएँ</b><br><small>नीचे 🎙️ से किसी भी अक्षर/शब्द की अपनी रिकॉर्डिंग फोन से चुनकर सेव करें।</small></div>
+</section>
 <section id="learnScreen" class="screen">
 <div class="lesson-head"><button id="backBtn" class="round-btn">←</button><div><span id="modeLabel">English</span><strong id="counter">1 / 26</strong></div><button id="speakBtn" class="round-btn">🔊</button></div>
 <div class="lesson-card"><div id="picture" class="picture">🍎</div><div class="letter-wrap"><div id="letter" class="letter">A</div></div><div id="word" class="word">A for Apple</div><p id="hint" class="hint">पहले सुनो, फिर उंगली से लिखो ✨</p></div>
 <div class="trace-card"><canvas id="traceCanvas"></canvas><div id="guide" class="guide">A</div><div class="trace-label">✍️ यहाँ उंगली से लिखो</div></div>
 <div class="actions"><button id="clearBtn" class="secondary">↻ फिर से</button><button id="checkBtn" class="primary">✓ मैंने लिखा</button><button id="nextBtn" class="next">आगे →</button></div></section>
+<div id="audioManager" class="audio-modal" aria-hidden="true"><div class="audio-box"><div class="audio-title"><div><b>🎙️ अपनी आवाज़ सेट करें</b><small>फोन से ऑडियो चुनें और ऐप में सेव करें</small></div><button id="closeAudioManager" class="round-btn">×</button></div><div class="audio-note">ऑडियो इसी फोन में सेव रहेगा। हर अक्षर के सामने अपनी MP3/M4A/WAV रिकॉर्डिंग चुनें।</div><div id="audioList" class="audio-list"></div></div></div>
 <div id="success" class="success-overlay" aria-hidden="true"><div class="success-box"><div class="big-star">⭐</div><h2>बहुत बढ़िया! 🎉</h2><p>तुमने बहुत अच्छा लिखा!</p><button id="successNext" class="primary">अगला सीखें →</button></div></div>
-</main><script src="app.js"></script></body></html>
+</main><input id="audioFilePicker" type="file" accept="audio/*" hidden><script src="app.js"></script></body></html>
