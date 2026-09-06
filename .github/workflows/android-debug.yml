@@ -23,6 +23,16 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Validate JavaScript and AI sources
+        run: |
+          node --check app.js
+          node --check ai.js
+          node --check visual-ai.js
+          grep -q "Google ML Kit — native only" ai.js
+          grep -q "KidsSeekhoAI.recognize" ai.js
+          grep -q "KidsSeekhoAI.downloadModel" ai.js
+          grep -q "KidsSeekhoAI.modelStatus" ai.js
+          grep -q "setPointerCapture" ai.js
       - name: Install Cordova
         run: npm install --global cordova@13.0.0
       - name: Create Android app shell
@@ -46,10 +56,15 @@ jobs:
       - name: Build debug APK
         working-directory: android-build
         run: cordova build android --debug --no-telemetry
-      - name: Verify debug APK
+      - name: Verify debug APK and embedded sources
         run: |
-          test -f android-build/platforms/android/app/build/outputs/apk/debug/app-debug.apk
-          ls -lh android-build/platforms/android/app/build/outputs/apk/debug/app-debug.apk
+          APK=android-build/platforms/android/app/build/outputs/apk/debug/app-debug.apk
+          test -f "$APK"
+          ls -lh "$APK"
+          sha256sum "$APK"
+          unzip -p "$APK" assets/www/ai.js | grep -q "setPointerCapture"
+          unzip -p "$APK" assets/www/ai.js | grep -q "ऑफलाइन भी काम करेगा"
+          unzip -l "$APK" | grep -q "KidsSeekhoAI"
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
