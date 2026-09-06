@@ -32,7 +32,7 @@ jobs:
           grep -Fq "A for Apple" app.js
           grep -Fq "अ से अनार" app.js
           grep -Fq "lessonCard" index.html
-          if grep -Fq "traceCanvas\|autoCheck\|AI मॉडल डाउनलोड" index.html app.js; then
+          if grep -Eq 'traceCanvas|autoCheck|AI मॉडल डाउनलोड' index.html app.js; then
             echo "Old handwriting UI detected"
             exit 1
           fi
@@ -43,7 +43,7 @@ jobs:
           cordova create android-build com.malaram.kidsseekho "Kids Seekho"
           rm -rf android-build/www/*
           cp index.html style.css app.js manifest.webmanifest sw.js android-build/www/
-          cp -R audio android-build/www/audio
+          if [ -d audio ]; then cp -R audio android-build/www/audio; fi
       - name: Add Android platform
         working-directory: android-build
         run: cordova platform add android@13.0.0 --no-telemetry
